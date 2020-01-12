@@ -1,1 +1,0 @@
-{"good": 1, "morning": 4, "new": 5, "york": 9, "q": 7, "bonjour": 0, "le": 2, "monde": 3, "winek": 8, "pacine": 6}

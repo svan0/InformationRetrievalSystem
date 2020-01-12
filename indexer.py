@@ -1,4 +1,5 @@
 from heapq import merge
+from nltk.corpus import brown
 import json
 import pickle
 from encoding import gap_encoding, gamma_encoding, gap_decoding, gamma_decoding, bitstring_to_bytes, bytes_to_bit_string
@@ -54,10 +55,10 @@ class Indexer:
         for i in range(len(compressed_index)):
             compressed_index[i] = bitstring_to_bytes(compressed_index[i])
 
-        with open('term_to_term_id_{}.txt'.format(self.name), 'w') as filehandle:
+        with open('term_to_term_id/term_to_term_id_{}.txt'.format(self.name), 'w') as filehandle:
             json.dump(self.term_to_term_id, filehandle)
 
-        with open('{}_index.data'.format(self.name), 'wb') as filehandle:
+        with open('indexers/{}_index.data'.format(self.name), 'wb') as filehandle:
             pickle.dump(compressed_index, filehandle)
 
     def load_indexer_from_disk(self):
@@ -66,14 +67,14 @@ class Indexer:
         self.term_id_to_term = []
         self.term_to_term_id = {}
 
-        with open('term_to_term_id_{}.txt'.format(self.name), 'r') as filehandle:
+        with open('term_to_term_id/term_to_term_id_{}.txt'.format(self.name), 'r') as filehandle:
             self.term_to_term_id = json.load(filehandle)
 
         self.term_id_to_term = [-1 for i in range(len(self.term_to_term_id))]
         for term, term_id in self.term_to_term_id.items():
             self.term_id_to_term[term_id] = term
 
-        with open('{}_index.data'.format(self.name), 'rb') as filehandle:
+        with open('indexers/{}_index.data'.format(self.name), 'rb') as filehandle:
             compressed_index = pickle.load(filehandle)
 
         for i in range(len(compressed_index)):
@@ -116,3 +117,71 @@ def merge_indexes(index_A, index_B):
     result.indexer = indexer
     result.number_of_words = total_size
     return result
+
+
+if __name__ == '__main__':
+    def try_on_small_data():
+        docs = ["Good morning new york q",
+                "Bonjour le monde",
+                "Winek Pacine",
+                "Good morning sna francisco",
+                "Bonjour le monde",
+                "Winek 7awem"]
+
+        indexer = Indexer("my_small_index1")
+        for doc_id in range(4):
+            doc = docs[doc_id]
+            for word in doc.split():
+                indexer.add_word_to_document(word.lower(), doc_id + 1)
+
+        print(indexer)
+
+        indexer.save_indexer_to_disk()
+
+        new_index = Indexer("my_small_index1")
+        new_index.load_indexer_from_disk()
+
+        print(new_index)
+
+        indexer2 = Indexer("my_small_index2")
+        for doc_id in range(4, len(docs)):
+            doc = docs[doc_id]
+            for word in doc.split():
+                indexer2.add_word_to_document(word.lower(), doc_id + 1)
+
+        print(indexer2)
+
+        merge_index = merge_indexes(indexer, indexer2)
+        print(merge_index)
+
+    def try_on_larger_data():
+        docs = ['ca01', 'ca02', 'ca03', 'ca04', 'ca05', 'ca06', 'ca07', 'ca08']
+
+        index1 = Indexer("my_index1")
+        for doc_id in range(4):
+            doc_name = docs[doc_id]
+            for word in brown.words(doc_name):
+                index1.add_word_to_document(word.lower(), doc_id + 1)
+
+        print(index1)
+        index1.save_indexer_to_disk()
+
+
+        index2 = Indexer("my_index2")
+        for doc_id in range(4, len(docs)):
+            doc_name = docs[doc_id]
+            for word in brown.words(doc_name):
+                index2.add_word_to_document(word, doc_id + 1)
+
+        print(index2)
+        index2.save_indexer_to_disk()
+
+        index1.load_indexer_from_disk()
+        index2.load_indexer_from_disk()
+
+        merge_index = merge_indexes(index1, index2)
+        print(merge_index)
+
+        merge_index.save_indexer_to_disk()
+
+    try_on_larger_data()
